@@ -1,0 +1,36 @@
+---
+- hosts:
+  vars:
+    backupServer: ""
+    bucketName: ""
+  tasks:
+    - name: "Download Velero install"
+      get_url:
+        url: https://github.com/heptio/velero/releases/download/v1.1.0/velero-v1.1.0-linux-amd64.tar.gz
+        dest: /tmp/velero-1.1.0.tar.gz
+    - name: "Extract velero archive"
+      unarchive:
+        src: /tmp/velero-1.1.0.tar.gz
+        dest: /tmp/
+        remote_src: yes
+    - name: "Copy mini credentials"
+      copy: 
+        src: './config/minio-credentials'
+        dest: '/tmp/minio-credentials'
+    - name: "Copy velero binary to /usr/bin/"
+      shell: "cp /tmp/velero-v1.1.0-linux-amd64/velero /usr/bin/velero"
+      become: yes
+      become_user: root
+    - name: "Install velero"
+      shell: velero install --provider aws --bucket "{{ bucketName }}" --secret-file /tmp/minio-credentials --use-volume-snapshots=false --backup-location-config region=minio,s3ForcePathStyle="true",s3Url=http://"{{ backupServer }}":9000
+      register: veleroOut
+    - name: "Print velero Install output"
+      debug: msg="{{ veleroOut.stdout  }}"
+    - name: "Cleanup velero"
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /tmp/velero-v1.1.0-linux-amd64
+        - /tmp/velero-1.1.0.tar.gz
+        - /tmp/minio-credentials

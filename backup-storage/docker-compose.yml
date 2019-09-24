@@ -1,0 +1,11 @@
+version: '2'
+services:
+  minio:
+    image: minio/minio
+    volumes:
+      - '/data/:/data'
+    ports:
+      - "9000:9000"
+    command: server /data
+    container_name: kubernetes-backup-minio
+    restart: always
